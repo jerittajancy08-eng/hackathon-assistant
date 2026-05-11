@@ -3,7 +3,7 @@ import axios from 'axios';
 export async function sendChatMessage(messages, sessionId, token) {
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const response = await axios.post(
-    '/api/chat',
+    'https://hackathon-assistant-tlra.vercel.app/api/chats',
     { messages, sessionId },
     { headers }
   );
