@@ -1,45 +1,27 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const { config } = require('./config');
-const { connectDb } = require('./config/db');
-const { seedHackathons } = require('./utils/seedData');
-const chatRoute = require('./routes/chat');
-const authRoute = require('./routes/auth');
-const hackathonRoute = require('./routes/hackathons');
-const { errorHandler } = require('./middlewares/errorHandler');
+import express from 'express';
+import cors from 'cors';
 
 const app = express();
 
-// Basic security and JSON parsing middleware
-app.use(helmet());
-app.use(express.json({ limit: '1mb' }));
-app.use(
-  cors({
-    origin: config.frontendOrigin,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  })
-);
+app.use(cors());
+app.use(express.json());
 
-// API routes
-app.use('/api/chat', chatRoute);
-app.use('/api/auth', authRoute);
-app.use('/api/hackathons', hackathonRoute);
+app.get('/', (req, res) => {
+  res.send('Backend running');
+});
 
-// Global error handling middleware
-app.use(errorHandler);
-
-async function startServer() {
+app.post('/api/chat', async (req, res) => {
   try {
-    await connectDb();
-    await seedHackathons();
-    app.listen(config.port, () => {
-      console.log(`Hackathon Assistant backend listening on port ${config.port}`);
+    const { message } = req.body;
+
+    res.json({
+      reply: `You said: ${message}`,
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
+    res.status(500).json({
+      error: 'Server error',
+    });
   }
-}
+});
 
-startServer();
+export default app;
