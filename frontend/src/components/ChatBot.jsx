@@ -16,39 +16,36 @@ function ChatBot({ messages, setMessages, sessionId, authToken, onSaveSession })
   }, [messages, isLoading]);
 
   const handleSend = async (content) => {
-    const userMessage = { role: 'user', content };
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
-    setIsLoading(true);
-    setError('');
-
-   try {
-  const response = await sendChatMessage(
-    updatedMessages,
-    sessionId,
-    authToken
-  );
-
-  const assistantMessage = {
-    role: 'assistant',
-    content: response.reply || "Hello from AI"
+  const userMessage = {
+    role: 'user',
+    content
   };
 
-  setMessages([
-    ...updatedMessages,
-    assistantMessage
-  ]);
+  const updatedMessages = [...messages, userMessage];
 
-  if (response.sessionId) {
-    onSaveSession(response.sessionId);
+  setMessages(updatedMessages);
+
+  try {
+    const response = await sendChatMessage(
+      updatedMessages,
+      sessionId,
+      authToken
+    );
+
+    const assistantMessage = {
+      role: 'assistant',
+      content: response.reply
+    };
+
+    setMessages([
+      ...updatedMessages,
+      assistantMessage
+    ]);
+
+  } catch (error) {
+    console.error(error);
   }
-
-} catch (err) {
-  setError(err.message || 'Unable to reach chatbot');
-}finally {
-      setIsLoading(false);
-    }
-  };
+};
 
   return (
     <div className="flex h-full flex-col gap-5">
