@@ -3,38 +3,15 @@ import { useState } from 'react';
 function ChatInput({ onSend, disabled }) {
   const [text, setText] = useState('');
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+ const handleSubmit = (e) => {
+  e.preventDefault();
 
-    if (!text.trim()) return;
+  if (!text.trim()) return;
 
-    const userMessage = text.trim();
+  onSend(text.trim());
 
-    onSend(userMessage);
-
-    setText('');
-
-    try {
-    const response = await fetch(
-  'https://hackathon-assistant-tlra.vercel.app/api/chat',
-  {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      message: userMessage,
-    }),
-  }
-);
-
-
-const data = await response.json();
-onSend(data.reply, 'assistant');
-    } catch (error) {
-      
-    }
-  };
+  setText("");
+};
 
   return (
     <form

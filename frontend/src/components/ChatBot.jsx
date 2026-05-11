@@ -16,6 +16,8 @@ function ChatBot({ messages, setMessages, sessionId, authToken, onSaveSession })
   }, [messages, isLoading]);
 
   const handleSend = async (content) => {
+  if (!content || content.trim() === "") return;
+
   const userMessage = {
     role: "user",
     content,
@@ -43,18 +45,18 @@ function ChatBot({ messages, setMessages, sessionId, authToken, onSaveSession })
     ]);
 
   } catch (error) {
-  console.error(error);
+    console.error(error);
 
-  const errorMessage = {
-    role: "assistant",
-    content: "Something went wrong.",
-  };
+    const errorMessage = {
+      role: "assistant",
+      content: "Something went wrong.",
+    };
 
-  setMessages([
-    ...updatedMessages,
-    errorMessage,
-  ]);
-}
+    setMessages([
+      ...updatedMessages,
+      errorMessage,
+    ]);
+  }
 };
 
   return (
