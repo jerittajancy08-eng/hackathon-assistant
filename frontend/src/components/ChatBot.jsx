@@ -22,21 +22,30 @@ function ChatBot({ messages, setMessages, sessionId, authToken, onSaveSession })
     setIsLoading(true);
     setError('');
 
-    try {
-      const response = await sendChatMessage(updatedMessages, sessionId, authToken);
-      setMessages([
-  ...updatedMessages,
-  {
+   try {
+  const response = await sendChatMessage(
+    updatedMessages,
+    sessionId,
+    authToken
+  );
+
+  const assistantMessage = {
     role: 'assistant',
-    content: response.data.reply || "No response",
+    content: response.reply || "Hello from AI"
+  };
+
+  setMessages([
+    ...updatedMessages,
+    assistantMessage
+  ]);
+
+  if (response.sessionId) {
+    onSaveSession(response.sessionId);
   }
-]);
-      if (response.sessionId) {
-        onSaveSession(response.sessionId);
-      }
-    } catch (err) {
-      setError(err.message || 'Unable to reach the chatbot. Please try again.');
-    } finally {
+
+} catch (err) {
+  setError(err.message || 'Unable to reach chatbot');
+}finally {
       setIsLoading(false);
     }
   };
