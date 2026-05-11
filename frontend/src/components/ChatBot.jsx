@@ -28,7 +28,7 @@ function ChatBot({ messages, setMessages, sessionId, authToken, onSaveSession })
   ...updatedMessages,
   {
     role: 'assistant',
-    content: response.reply || response.answer || "No response"
+    content: response.data.reply || "No response",
   }
 ]);
       if (response.sessionId) {
