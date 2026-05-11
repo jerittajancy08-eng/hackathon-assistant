@@ -15,19 +15,19 @@ function ChatInput({ onSend, disabled }) {
     setText('');
 
     try {
-     const response = await fetch('/api/chat',  {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    message: userMessage,
-  }),
-});
+    const response = await fetch(
+  'https://hackathon-assistant-tlra.vercel.app/api/chat',
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      message: userMessage,
+    }),
+  }
+);
 
-      if (!response.ok) {
-  throw new Error('Request failed');
-}
 
 const data = await response.json();
 onSend(data.reply, 'assistant');
