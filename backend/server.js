@@ -36,28 +36,23 @@ app.post("/api/chat", async (req, res) => {
 
     const data = await response.json();
 
-console.log(data);
+    console.log(JSON.stringify(data, null, 2));
 
-const reply =
-  data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const reply =
+      data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-if (!reply) {
-  return res.json({
-    reply: "Gemini returned empty response",
-  });
-}
+    if (!reply) {
+      return res.json({
+        reply: "Gemini returned empty response",
+      });
+    }
 
-res.json({ reply });
+    res.json({ reply });
   } catch (error) {
     console.error(error);
+
     res.status(500).json({
-      reply: "Something went wrong",
+      reply: "Server error",
     });
   }
-});
-
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
 });
