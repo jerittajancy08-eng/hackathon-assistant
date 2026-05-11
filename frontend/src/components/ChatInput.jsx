@@ -32,7 +32,7 @@ function ChatInput({ onSend, disabled }) {
 const data = await response.json();
 onSend(data.reply, 'assistant');
     } catch (error) {
-      onSend('Server error. Try again later.', 'assistant');
+      
     }
   };
 
