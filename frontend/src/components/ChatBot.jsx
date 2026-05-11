@@ -24,7 +24,13 @@ function ChatBot({ messages, setMessages, sessionId, authToken, onSaveSession })
 
     try {
       const response = await sendChatMessage(updatedMessages, sessionId, authToken);
-      setMessages([...updatedMessages, { role: 'assistant', content: response.answer }]);
+      setMessages([
+  ...updatedMessages,
+  {
+    role: 'assistant',
+    content: response.reply || response.answer || "No response"
+  }
+]);
       if (response.sessionId) {
         onSaveSession(response.sessionId);
       }
