@@ -7,7 +7,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'https://hackathon-assistant-tlra.vercel.app/api/chat',
         changeOrigin: true,
         secure: false,
       },
