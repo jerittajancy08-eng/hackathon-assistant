@@ -72,7 +72,17 @@ export default async function handler(req, res) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(geminiPayload),
+      body: JSON.stringify({
+  contents: [
+    {
+      parts: [
+        {
+          text: message,
+        },
+      ],
+    },
+  ],
+}),
     });
 
     console.log('[INFO] Gemini HTTP Status:', geminiResponse.status);
