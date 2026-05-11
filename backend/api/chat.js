@@ -29,18 +29,25 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-console.log(JSON.stringify(data, null, 2));
+    console.log(JSON.stringify(data, null, 2));
 
-const reply =
-  data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const reply =
+      data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-if (!reply) {
-  return res.status(200).json({
-    reply: "No text found in Gemini response",
-    raw: data
-  });
-}
+    if (!reply) {
+      return res.status(200).json({
+        reply: "No text found in Gemini response",
+        raw: data,
+      });
+    }
 
-return res.status(200).json({ reply });
+    return res.status(200).json({ reply });
+
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      reply: "Server error",
+    });
   }
 }
