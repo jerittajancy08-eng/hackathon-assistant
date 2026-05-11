@@ -1,27 +1,44 @@
-import express from 'express';
-import cors from 'cors';
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import OpenAI from "openai";
+
+dotenv.config();
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-app.get('/', (req, res) => {
-  res.send('Backend running');
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+app.get("/", (req, res) => {
+  res.send("Backend running");
 });
 
 app.post('/api/chat', async (req, res) => {
   try {
-    const { message } = req.body;
+    const { messages } = req.body;
+
+    const lastMessage = messages[messages.length - 1];
 
     res.json({
-      reply: `You said: ${message}`,
+      reply: `You said: ${lastMessage.content}`
     });
+
   } catch (error) {
+    console.error(error);
+
     res.status(500).json({
-      error: 'Server error',
+      reply: 'Server error'
     });
   }
 });
 
-export default app;
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
