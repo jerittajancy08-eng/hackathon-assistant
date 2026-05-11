@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import OpenAI from "openai";
 
 dotenv.config();
 
@@ -9,31 +10,38 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
 app.get("/", (req, res) => {
-  return res.send("Backend running");
+  res.send("Backend running");
 });
 
 app.post("/api/chat", async (req, res) => {
   try {
     const { messages } = req.body;
 
-    if (!messages || messages.length === 0) {
+    if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({
         reply: "No messages provided",
       });
     }
 
-    const lastMessage = messages[messages.length - 1];
+    const completion = await client.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages,
+    });
 
-    return res.json({
-      reply: `You said: ${lastMessage.content}`,
+    res.json({
+      reply: completion.choices[0].message.content,
     });
 
   } catch (error) {
-    console.error("SERVER ERROR:", error);
+    console.error(error);
 
-    return res.status(500).json({
-      reply: "Server error",
+    res.status(500).json({
+      reply: "OpenAI request failed",
     });
   }
 });
