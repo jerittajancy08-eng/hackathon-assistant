@@ -28,11 +28,14 @@ function ChatInput({ onSend, disabled }) {
         }
       );
 
-      const data = await response.json();
+      if (!response.ok) {
+  throw new Error('Request failed');
+}
 
-      onSend(data.reply, 'assistant');
+const data = await response.json();
+onSend(data.reply, 'assistant');
     } catch (error) {
-      console.log(error);
+      onSend('Server error. Try again later.', 'assistant');
     }
   };
 
