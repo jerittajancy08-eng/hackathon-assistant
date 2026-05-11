@@ -43,8 +43,18 @@ function ChatBot({ messages, setMessages, sessionId, authToken, onSaveSession })
     ]);
 
   } catch (error) {
-    console.error(error);
-  }
+  console.error(error);
+
+  const errorMessage = {
+    role: "assistant",
+    content: "Something went wrong.",
+  };
+
+  setMessages([
+    ...updatedMessages,
+    errorMessage,
+  ]);
+}
 };
 
   return (
