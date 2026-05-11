@@ -17,8 +17,8 @@ function ChatBot({ messages, setMessages, sessionId, authToken, onSaveSession })
 
   const handleSend = async (content) => {
   const userMessage = {
-    role: 'user',
-    content
+    role: "user",
+    content,
   };
 
   const updatedMessages = [...messages, userMessage];
@@ -33,13 +33,13 @@ function ChatBot({ messages, setMessages, sessionId, authToken, onSaveSession })
     );
 
     const assistantMessage = {
-      role: 'assistant',
-      content: response.reply
+      role: "assistant",
+      content: response.reply,
     };
 
     setMessages([
       ...updatedMessages,
-      assistantMessage
+      assistantMessage,
     ]);
 
   } catch (error) {
