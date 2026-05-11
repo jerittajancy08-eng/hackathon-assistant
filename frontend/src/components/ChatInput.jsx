@@ -3,14 +3,41 @@ import { useState } from 'react';
 function ChatInput({ onSend, disabled }) {
   const [text, setText] = useState('');
 
- const handleSubmit = (e) => {
+ const handleSubmit = async (e) => {
   e.preventDefault();
 
   if (!text.trim()) return;
 
-  onSend(text.trim());
+  const userMessage = text.trim();
+
+  onSend(userMessage);
 
   setText("");
+
+  try {
+    const response = await fetch(
+      "https://hackathon-assistant-ly4m.vercel.app/api/chat",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: userMessage,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    console.log(data);
+
+    onSend(data.reply || "No response", "assistant");
+  } catch (error) {
+    console.error(error);
+
+    onSend("Something went wrong.", "assistant");
+  }
 };
 
   return (
