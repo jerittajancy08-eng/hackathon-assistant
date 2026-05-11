@@ -16,7 +16,7 @@ function ChatInput({ onSend, disabled }) {
 
   try {
     const response = await fetch(
-      "https://hackathon-assistant-ly4m.vercel.app/api/chat",
+      "https://hackathon-assistant-tlra.vercel.app/api/chat",
       {
         method: "POST",
         headers: {
