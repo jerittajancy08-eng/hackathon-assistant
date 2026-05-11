@@ -15,7 +15,7 @@ function ChatInput({ onSend, disabled }) {
     setText('');
 
     try {
-      const response = await fetch('https://hackathon-assistant-tlra.vercel.app/api/chat', {
+     const response = await fetch('/api/chat',  {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
