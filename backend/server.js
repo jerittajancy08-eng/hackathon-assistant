@@ -36,11 +36,18 @@ app.post("/api/chat", async (req, res) => {
 
     const data = await response.json();
 
-    const reply =
-      data.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "No response";
+console.log(data);
 
-    res.json({ reply });
+const reply =
+  data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+if (!reply) {
+  return res.json({
+    reply: "Gemini returned empty response",
+  });
+}
+
+res.json({ reply });
   } catch (error) {
     console.error(error);
     res.status(500).json({
