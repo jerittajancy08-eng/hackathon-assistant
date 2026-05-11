@@ -7,5 +7,6 @@ export async function sendChatMessage(messages, sessionId, token) {
     { messages, sessionId },
     { headers }
   );
+  console.log(response.data);
   return response.data;
 }
