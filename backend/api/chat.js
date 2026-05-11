@@ -29,15 +29,13 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    console.log(data);
+console.log(data);
 
-    const reply =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "No response from Gemini";
+const reply =
+  data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+  "No reply from Gemini";
 
-    return res.status(200).json({
-      reply,
-    });
+return res.status(200).json({ reply });
   } catch (error) {
     console.error(error);
 
