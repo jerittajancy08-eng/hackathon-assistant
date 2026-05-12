@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.GROQ_API_KEY,
   baseURL: "https://api.groq.com/openai/v1",
 });
 
@@ -24,28 +24,25 @@ export default async function handler(req, res) {
 
   try {
 
-    const { messages } = req.body;
+    const { message } = req.body;
 
-    const lastMessage =
-      messages?.[messages.length - 1]?.text || "Hello";
+const lastMessage = message || "Hello";
 
-    const completion =
-      await client.chat.completions.create({
-        model: "llama3-8b-8192",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a helpful Hackathon Assistant chatbot.",
-          },
-          {
-            role: "user",
-            content: lastMessage,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 500,
-      });
+   const completion =
+  await client.chat.completions.create({
+    model: "llama3-70b-8192",
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a Hackathon Assistant AI.",
+      },
+      {
+        role: "user",
+        content: lastMessage,
+      },
+    ],
+  });
 
     const reply =
       completion.choices?.[0]?.message?.content;
