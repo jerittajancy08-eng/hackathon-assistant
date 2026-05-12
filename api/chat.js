@@ -1,3 +1,9 @@
+import Groq from "groq-sdk";
+
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -16,17 +22,23 @@ export default async function handler(req, res) {
   try {
     const { messages } = req.body;
 
-    const lastMessage =
-      messages?.[messages.length - 1]?.content || "Hello";
+    const completion = await groq.chat.completions.create({
+      model: "llama3-8b-8192",
+      messages,
+    });
+
+    const reply =
+      completion.choices?.[0]?.message?.content ||
+      "No response from AI";
 
     return res.status(200).json({
-      reply: `Hackathon Assistant reply: ${lastMessage}`,
+      reply,
     });
   } catch (error) {
     console.error(error);
 
     return res.status(500).json({
-      error: "Server error",
+      error: "AI request failed",
     });
   }
 }
