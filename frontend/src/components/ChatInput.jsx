@@ -11,33 +11,7 @@ function ChatInput({ onSend, disabled }) {
   const userMessage = text.trim();
 
   onSend(userMessage);
-
   setText("");
-
-  try {
-    const response = await fetch(
-      "https://hackathon-assistant-tlra.vercel.app/api/chat",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: userMessage,
-        }),
-      }
-    );
-
-    const data = await response.json();
-
-    console.log(data);
-
-    onSend(data.reply || "No response", "assistant");
-  } catch (error) {
-    console.error(error);
-
-    onSend("Something went wrong.", "assistant");
-  }
 };
 
   return (
