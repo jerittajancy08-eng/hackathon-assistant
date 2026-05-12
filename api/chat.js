@@ -15,8 +15,8 @@ export default async function handler(req, res) {
 
   try {
 
-    const { message } = req.body;
-
+    const { messages } = req.body;
+const message = messages[messages.length - 1]?.content || "";
     const completion =
       await client.chat.completions.create({
         model: "llama3-70b-8192",
