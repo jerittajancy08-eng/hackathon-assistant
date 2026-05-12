@@ -1,18 +1,32 @@
-import axios from "axios";
+export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-export async function sendChatMessage(messages) {
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  if (req.method !== "POST") {
+    return res.status(405).json({
+      error: "Method not allowed",
+    });
+  }
+
   try {
-    const response = await axios.post(
-      "/api/chat",
-      { messages }
-    );
+    const { messages } = req.body;
 
-    return response.data;
+    const lastMessage =
+      messages?.[messages.length - 1]?.content || "Hello";
+
+    return res.status(200).json({
+      reply: `Hackathon Assistant reply: ${lastMessage}`,
+    });
   } catch (error) {
     console.error(error);
 
-    return {
-      reply: "Something went wrong."
-    };
+    return res.status(500).json({
+      error: "Server error",
+    });
   }
 }
