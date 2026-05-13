@@ -312,13 +312,17 @@ for (let i = 0; i < fullReply.length; i++) {
   )}
 
   <div
-    style={{
-  background:
-    msg.role === "user" ? "#2563eb" : "#1e293b",
-  maxWidth: "70%",
-  wordBreak: "break-word",
+style={{
+background:
+msg.role === "user" ? "#2563eb" : "#1e293b",
+maxWidth: "70%",
+wordBreak: "break-word",
+overflowWrap: "break-word",
+whiteSpace: "pre-wrap",
+padding: "12px",
+borderRadius: "12px",
 }}
-  >
+>
              <ReactMarkdown
   components={{
     a: ({ node, ...props }) => (
