@@ -1,129 +1,371 @@
-import { useEffect, useState } from 'react';
-import ChatBot from './components/ChatBot';
-import AuthPanel from './components/AuthPanel';
-import SessionList from './components/SessionList';
-import { defaultMessages } from './utils/constants';
-import { fetchProfile, fetchSessions } from './services/authService';
-import { loadChatSession } from './services/sessionService';
+import ReactMarkdown from "react-markdown";
+import { useState, useEffect, useRef } from "react";
+import { sendMessage } from "./services/chatService";
 
 function App() {
-  const [messages, setMessages] = useState(defaultMessages);
-  const [isDarkMode, setIsDarkMode] = useState(true);
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('hackathon_token') || '');
-  const [sessions, setSessions] = useState([]);
-  const [sessionId, setSessionId] = useState(localStorage.getItem('hackathon_sessionId') || '');
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [chatHistory, setChatHistory] = useState([]);
+const [currentChatId, setCurrentChatId] = useState(null);
+const messagesEndRef = useRef(null);
+const [loading, setLoading] = useState(false);
+useEffect(() => {
+  const savedChats =
+    JSON.parse(localStorage.getItem("chatHistory")) || [];
 
-  useEffect(() => {
-    document.body.classList.toggle('dark', isDarkMode);
-  }, [isDarkMode]);
+  setChatHistory(savedChats);
 
-  useEffect(() => {
-    if (!token) return;
-    restoreSession(token);
-  }, [token]);
+  if (savedChats.length > 0) {
+    setMessages(savedChats[0].messages);
+    setCurrentChatId(savedChats[0].id);
+  }
+}, []);
+useEffect(() => {
+  messagesEndRef.current?.scrollIntoView({
+    behavior: "smooth",
+  });
+}, [messages]);
+  async function handleSend() {
+  if (!message.trim()) return;
 
-  useEffect(() => {
-    if (sessionId) {
-      localStorage.setItem('hackathon_sessionId', sessionId);
-    } else {
-      localStorage.removeItem('hackathon_sessionId');
-    }
-  }, [sessionId]);
+     const userMessage = {
+  role: "user",
+  content: message,
+  time: new Date().toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  }),
+};
+ 
 
-  async function restoreSession(authToken) {
-    try {
-      const profileData = await fetchProfile(authToken);
-      setUser(profileData.user);
-      await loadSavedSessions(authToken);
-    } catch (error) {
-      console.warn('Unable to restore session:', error.message);
-      handleLogout();
-    }
+  const updatedMessages = [...messages, userMessage];
+
+setMessages(updatedMessages);
+setMessage("");
+
+  try {
+    setMessages((prev) => [
+  ...prev,
+  { role: "assistant", content: "Thinking..." },
+]);
+    const data = await sendMessage(message);
+    if (
+  message.toLowerCase().includes("hackathon") ||
+  message.toLowerCase().includes("ai") ||
+  message.toLowerCase().includes("web")
+) {
+  const res = await fetch(
+    `http://localhost:5000/api/hackathons/search?q=${message}`
+  );
+  const hackathons = await res.json();
+console.log(hackathons);
+
+  const formatted = hackathons
+  .slice(0, 5)
+  .map(
+    (h) => `
+━━━━━━━━━━━━━━
+🏆 ${h.title}
+
+📍 Location: ${h.location}
+
+🎯 Domain: ${h.domain}
+
+🚀 Mode: ${h.mode}
+
+💰 Prize: ${h.prize}
+
+📅 Date: ${h.date}
+
+🔗 [Register Here](${h.link})
+━━━━━━━━━━━━━━
+`
+  )
+  .join("\n");
+
+  data.reply =
+    "Here are some hackathons from database:\n\n" +
+    formatted;
+}
+setLoading(true);
+    const fullReply = data.reply || "No response";
+
+let currentText = "";
+
+const aiMessage = {
+  role: "assistant",
+  content: "",
+};
+
+const updated = [
+  ...updatedMessages,
+  {
+    role: "assistant",
+    content: currentText,
+    time: new Date().toLocaleTimeString([], {
+  hour: "2-digit",
+  minute: "2-digit",
+}),
+  },
+];
+
+setMessages(updated);
+setLoading(false);
+
+const updatedChat = {
+  id: currentChatId || Date.now(),
+  title: updatedMessages[0]?.content || "New Chat",
+  messages: updated,
+};
+
+let newHistory = [...chatHistory];
+
+const existingIndex = newHistory.findIndex(
+  (chat) => chat.id === updatedChat.id
+);
+
+if (existingIndex >= 0) {
+  newHistory[existingIndex] = updatedChat;
+} else {
+  newHistory.unshift(updatedChat);
+}
+
+setChatHistory(newHistory);
+
+localStorage.setItem(
+  "chatHistory",
+  JSON.stringify(newHistory)
+);
+
+setCurrentChatId(updatedChat.id);
+
+for (let i = 0; i < fullReply.length; i++) {
+  currentText += fullReply[i];
+
+  await new Promise((resolve) =>
+    setTimeout(resolve, 15)
+  );
+
+  setMessages((prev) => {
+    const updated = [...prev];
+
+    updated[updated.length - 1] = {
+      role: "assistant",
+      content: currentText,
+    };
+
+    return updated;
+  });
+}
+  } catch (error) {
+    console.error(error);
+    setLoading(false);
   }
 
-  async function loadSavedSessions(authToken) {
-    try {
-      const sessionData = await fetchSessions(authToken);
-      setSessions(sessionData.sessions);
-    } catch (error) {
-      console.warn('Unable to load saved sessions:', error.message);
-    }
-  }
-
-  const handleAuthSuccess = async (userData, authToken) => {
-    setUser(userData);
-    setToken(authToken);
-    localStorage.setItem('hackathon_token', authToken);
-    await loadSavedSessions(authToken);
-  };
-
-  function handleLogout() {
-    setUser(null);
-    setToken('');
-    setSessions([]);
-    setSessionId('');
-    setMessages(defaultMessages);
-    localStorage.removeItem('hackathon_token');
-    localStorage.removeItem('hackathon_sessionId');
-  }
-
-  const handleSessionSelect = async (selectedSessionId) => {
-    if (!token) return;
-    try {
-      const data = await loadChatSession(selectedSessionId, token);
-      setMessages(data.session.messages);
-      setSessionId(selectedSessionId);
-    } catch (error) {
-      console.error('Unable to load session:', error.message);
-    }
-  };
-
-  const handleSaveSession = (newSessionId) => {
-    setSessionId(newSessionId);
-    if (!sessions.some((session) => session._id === newSessionId)) {
-      loadSavedSessions(token);
-    }
-  };
+  setMessage("");
+}
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 antialiased">
-      <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-6 sm:px-6 lg:px-8">
-        <header className="mb-6 flex flex-col gap-4 rounded-3xl border border-slate-700/60 bg-slate-900/80 px-5 py-4 shadow-glow backdrop-blur-lg sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm uppercase tracking-[0.35em] text-cyan-400/90">Hackathon Assistant</p>
-            <h1 className="mt-2 text-3xl font-semibold text-white sm:text-4xl">
-              Discover hackathons, build teams, and launch projects.
-            </h1>
-          </div>
-          <button
-            onClick={() => setIsDarkMode((prev) => !prev)}
-            className="rounded-full border border-slate-700/60 bg-slate-800 px-4 py-2 text-sm text-slate-100 transition hover:border-cyan-400 hover:text-cyan-200"
-          >
-            {isDarkMode ? 'Light Mode' : 'Dark Mode'}
-          </button>
-        </header>
+    <div
+  style={{
+    background: "#020617",
+    display: "flex",
+        minHeight: "100vh",
+        color: "white",
+        padding: "40px",
+      }}
+    >
+      <div
+  style={{
+    width: "260px",
+    background: "#0f172a",
+    padding: "20px",
+    borderRight: "1px solid #1e293b",
+    height: "100vh",
+    overflowY: "auto",
+  }}
+>
+  <button
+    onClick={() => {
+      setMessages([]);
+      setCurrentChatId(null);
+    }}
+    style={{
+      width: "100%",
+      padding: "12px",
+      background: "#2563eb",
+      color: "white",
+      border: "none",
+      borderRadius: "10px",
+      cursor: "pointer",
+      marginBottom: "20px",
+    }}
+  >
+    + New Chat
+  </button>
 
-        <main className="flex-1 space-y-6 rounded-[2rem] border border-slate-700/60 bg-slate-900/70 p-4 shadow-glow backdrop-blur-xl sm:p-6">
-          <AuthPanel onAuthSuccess={handleAuthSuccess} onLogout={handleLogout} user={user} />
-
-          {user && (
-            <SessionList sessions={sessions} onSelect={handleSessionSelect} selectedSessionId={sessionId} />
-          )}
-
-          <div className="rounded-[2rem] border border-slate-700/60 bg-slate-950/90 p-4 shadow-xl shadow-slate-900/30 sm:p-6">
-            <ChatBot
-              messages={messages}
-              setMessages={setMessages}
-              authToken={token}
-              sessionId={sessionId}
-              onSaveSession={handleSaveSession}
-            />
-          </div>
-        </main>
-      </div>
+  {chatHistory.map((chat) => (
+    <div
+      key={chat.id}
+      onClick={() => {
+        setMessages(chat.messages);
+        setCurrentChatId(chat.id);
+      }}
+      style={{
+        padding: "10px",
+        background:
+          currentChatId === chat.id
+            ? "#1e293b"
+            : "transparent",
+        borderRadius: "8px",
+        cursor: "pointer",
+        marginBottom: "10px",
+      }}
+    >
+      {chat.title}
     </div>
-  );
+  ))}
+  </div>
+
+<div style={{ flex: 1, padding: "40px" }}>
+      <h1>Hackathon Assistant</h1>
+
+      <input
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        onKeyDown={(e) => {
+  if (e.key === "Enter") {
+    handleSend();
+  }
+}}
+        placeholder="Ask something..."
+        style={{
+          padding: "10px",
+          width: "300px",
+          color: "black",
+        }}
+      />
+
+      <button
+        onClick={handleSend}
+        style={{
+          marginLeft: "10px",
+          padding: "10px",
+        }}
+      >
+        Send
+      </button>
+
+      <div
+  style={{
+    marginTop: "20px",
+    overflowY: "auto",
+    height: "70vh",
+  }}
+>
+  {messages.map((msg, index) => (
+    <div
+  key={index}
+ style={{
+  display: "flex",
+
+  flexDirection:
+    msg.role === "user"
+      ? "row-reverse"
+      : "row",
+
+  alignItems: "flex-start",
+  gap: "10px",
+  marginBottom: "15px",
+}}
+>
+  {msg.role === "assistant" ? (
+    <div
+      style={{
+        width: "40px",
+        height: "40px",
+        borderRadius: "50%",
+        background: "#1d4ed8",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "20px",
+      }}
+    >
+      🤖
+    </div>
+  ) : (
+    <div
+      style={{
+        width: "40px",
+        height: "40px",
+        borderRadius: "50%",
+        background: "#2563eb",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "20px",
+      }}
+    >
+      👤
+    </div>
+  )}
+
+  <div
+    style={{
+  background:
+    msg.role === "user" ? "#2563eb" : "#1e293b",
+  maxWidth: "70%",
+  wordBreak: "break-word",
+}}
+  >
+             <ReactMarkdown
+  components={{
+    a: ({ node, ...props }) => (
+      <a
+        {...props}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          color: "#60a5fa",
+          textDecoration: "underline",
+        }}
+      />
+    ),
+  }}
+>
+  {msg.content}
+</ReactMarkdown>
+      <div
+  style={{
+    fontSize: "12px",
+    opacity: 0.7,
+    marginTop: "6px",
+  }}
+>
+  {msg.time}
+</div>
+    </div>
+  </div>
+))}
+<div ref={messagesEndRef} />
+{loading && (
+  <div
+    style={{
+      background: "#1e293b",
+      padding: "12px",
+      borderRadius: "12px",
+      width: "fit-content",
+      marginTop: "10px",
+      color: "white",
+    }}
+  >
+    Typing...
+  </div>
+)}
+    </div>
+  </div></div>
+);
 }
 
 export default App;
