@@ -2,7 +2,7 @@ import axios from "axios";
 
 export async function sendMessage(message) {
   const response = await axios.post(
-    "http://localhost:5000/api/chat",
+    "https://hackathon-assistant.onrender.com/api/chat",
     {
       messages: [
         {
