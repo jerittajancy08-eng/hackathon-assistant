@@ -55,8 +55,8 @@ setMessage("");
   message.toLowerCase().includes("web")
 ) {
   const res = await fetch(
-    `http://localhost:5000/api/hackathons/search?q=${message}`
-  );
+  `https://hackathon-assistant.onrender.com/api/hackathons/search?q=${message}`
+);
   const hackathons = await res.json();
 console.log(hackathons);
 
