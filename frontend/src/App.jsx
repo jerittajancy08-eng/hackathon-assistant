@@ -60,11 +60,12 @@ setMessage("");
   const hackathons = await res.json();
 console.log(hackathons);
 
-  const formatted = hackathons
+ const formatted = hackathons
   .slice(0, 5)
   .map(
     (h) => `
-━━━━━━━━━━━━━━
+---
+
 🏆 ${h.title}
 
 📍 Location: ${h.location}
@@ -75,10 +76,9 @@ console.log(hackathons);
 
 💰 Prize: ${h.prize}
 
-📅 Date: ${h.date}
+🗓 Date: ${h.date}
 
 🔗 [Register Here](${h.link})
-━━━━━━━━━━━━━━
 `
   )
   .join("\n");
