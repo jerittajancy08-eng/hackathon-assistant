@@ -139,24 +139,20 @@ localStorage.setItem(
 
 setCurrentChatId(updatedChat.id);
 
-for (let i = 0; i < fullReply.length; i++) {
-  currentText += fullReply[i];
+setMessages((prev) => {
+  const updated = [...prev];
 
-  await new Promise((resolve) =>
-    setTimeout(resolve, 15)
-  );
+  updated[updated.length - 1] = {
+    role: "assistant",
+    content: fullReply,
+    time: new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  };
 
-  setMessages((prev) => {
-    const updated = [...prev];
-
-    updated[updated.length - 1] = {
-      role: "assistant",
-      content: currentText,
-    };
-
-    return updated;
-  });
-}
+  return updated;
+});
   } catch (error) {
     console.error(error);
     setLoading(false);
