@@ -58,7 +58,6 @@ setMessage("");
   `https://hackathon-assistant.onrender.com/api/hackathons/search?q=${message}`
 );
   const hackathons = await res.json();
-console.log(hackathons);
 
  const formatted = hackathons
   .slice(0, 5)
