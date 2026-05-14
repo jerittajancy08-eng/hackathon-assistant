@@ -141,7 +141,7 @@ setCurrentChatId(updatedChat.id);
 
 setMessages((prev) => {
   const updated = [...prev];
-
+console.log(fullReply);
   updated[updated.length - 1] = {
     role: "assistant",
     content: fullReply,
@@ -334,7 +334,7 @@ borderRadius: "12px",
     ),
   }}
 >
-  {msg.content}
+   {msg.content || ""}
 </ReactMarkdown>
       <div
   style={{
