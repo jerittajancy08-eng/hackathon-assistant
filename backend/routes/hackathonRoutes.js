@@ -52,12 +52,17 @@ const hackathons = [
 
 router.get("/search", (req, res) => {
   const query = req.query.q?.toLowerCase() || "";
+const searchWords = q.toLowerCase().split(" ");
 
-  const filtered = hackathons.filter((h) =>
-    h.title.toLowerCase().includes(query) ||
-    h.domain.toLowerCase().includes(query) ||
-    h.location.toLowerCase().includes(query)
-  );
+const filtered = hackathons.filter((h) =>
+  searchWords.some(
+    (word) =>
+      h.title.toLowerCase().includes(word) ||
+      h.domain.toLowerCase().includes(word) ||
+      h.location.toLowerCase().includes(word) ||
+      h.mode.toLowerCase().includes(word)
+  )
+);
 
   res.json(filtered);
 });
