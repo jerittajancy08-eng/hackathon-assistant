@@ -3,6 +3,15 @@ import { useState, useEffect, useRef } from "react";
 import { sendMessage } from "./services/chatService";
 
 function App() {
+  const filterButton = {
+  padding: "10px 16px",
+  background: "#2563eb",
+  color: "white",
+  border: "none",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontWeight: "bold",
+};
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [chatHistory, setChatHistory] = useState([]);
@@ -224,6 +233,54 @@ console.log(fullReply);
 
 <div style={{ flex: 1, padding: "40px" }}>
       <h1>Hackathon Assistant</h1>
+      <div
+  style={{
+    display: "flex",
+    gap: "10px",
+    marginBottom: "20px",
+    flexWrap: "wrap",
+  }}
+>
+  <button
+    onClick={() => {
+      setMessage("ai");
+      handleSend();
+    }}
+    style={filterButton}
+  >
+    AI
+  </button>
+
+  <button
+    onClick={() => {
+      setMessage("web3");
+      handleSend();
+    }}
+    style={filterButton}
+  >
+    Web3
+  </button>
+
+  <button
+    onClick={() => {
+      setMessage("online");
+      handleSend();
+    }}
+    style={filterButton}
+  >
+    Online
+  </button>
+
+  <button
+    onClick={() => {
+      setMessage("offline");
+      handleSend();
+    }}
+    style={filterButton}
+  >
+    Offline
+  </button>
+</div>
 
       <input
         value={message}
