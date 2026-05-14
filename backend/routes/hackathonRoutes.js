@@ -51,18 +51,19 @@ const hackathons = [
 ];
 
 router.get("/search", (req, res) => {
-  const query = req.query.q?.toLowerCase() || "";
-const searchWords = q.toLowerCase().split(" ");
+  const q = req.query.q?.toLowerCase() || "";
 
-const filtered = hackathons.filter((h) =>
-  searchWords.some(
-    (word) =>
-      h.title.toLowerCase().includes(word) ||
-      h.domain.toLowerCase().includes(word) ||
-      h.location.toLowerCase().includes(word) ||
-      h.mode.toLowerCase().includes(word)
-  )
-);
+  const searchWords = q.split(" ");
+
+  const filtered = hackathons.filter((h) =>
+    searchWords.some(
+      (word) =>
+        h.title.toLowerCase().includes(word) ||
+        h.domain.toLowerCase().includes(word) ||
+        h.location.toLowerCase().includes(word) ||
+        h.mode.toLowerCase().includes(word)
+    )
+  );
 
   res.json(filtered);
 });
