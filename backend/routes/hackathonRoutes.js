@@ -49,21 +49,19 @@ const hackathons = [
     link: "https://devpost.com",
   },
 ];
-
+router.get("/", (req, res) => {
+  res.json(hackathons);
+});
 router.get("/search", (req, res) => {
-  const q = req.query.q?.toLowerCase() || "";
+  const query = req.query.q?.toLowerCase() || "";
 
-  const searchWords = q.split(" ");
-
-  const filtered = hackathons.filter((h) =>
-    searchWords.some(
-      (word) =>
-        h.title.toLowerCase().includes(word) ||
-        h.domain.toLowerCase().includes(word) ||
-        h.location.toLowerCase().includes(word) ||
-        h.mode.toLowerCase().includes(word)
-    )
+ const filtered = hackathons.filter((hackathon) => {
+  return (
+    query.includes(hackathon.domain.toLowerCase()) ||
+    query.includes(hackathon.mode.toLowerCase()) ||
+    hackathon.title.toLowerCase().includes(query)
   );
+});
 
   res.json(filtered);
 });

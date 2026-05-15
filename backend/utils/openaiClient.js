@@ -1,44 +1,21 @@
-const axios = require('axios');
+import OpenAI from "openai";
 
-async function createAiResponse(messages) {
-  try {
-    const lastMessage =
-      messages[messages.length - 1]?.content || '';
+const client = new OpenAI({
+  apiKey: process.env.GROQ_API_KEY,
+  baseURL: "https://api.groq.com/openai/v1",
+});
 
-    const response = await axios.post(
-      'http://127.0.0.1:11434/api/generate',
+export async function createAiResponse(message) {
+
+  const completion = await client.chat.completions.create({
+    model: "llama-3.1-8b-instant",
+    messages: [
       {
-        model: 'tinyllama',
-        prompt: `
-You are Hackathon Assistant.
+        role: "user",
+        content: message,
+      },
+    ],
+  });
 
-You ONLY help with:
-- hackathons
-- coding
-- AI
-- startups
-- web development
-- projects
-- programming
-- technology
-
-User message:
-${lastMessage}
-
-Reply shortly and clearly.
-`,
-        stream: false,
-      }
-    );
-
-    return response.data.response;
-  } catch (error) {
-    console.log('Ollama Error:', error.message);
-
-    return 'AI is currently unavailable.';
-  }
+  return completion.choices[0].message.content;
 }
-
-module.exports = {
-  createAiResponse,
-};

@@ -1,18 +1,24 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
-const chatSessionSchema = new mongoose.Schema(
-  {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    name: { type: String, trim: true, default: 'Hackathon session' },
-    messages: [
-      {
-        role: { type: String, required: true },
-        content: { type: String, required: true },
-      },
-    ],
+const chatSessionSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
   },
-  { timestamps: true }
-);
 
-const ChatSession = mongoose.model('ChatSession', chatSessionSchema);
-module.exports = ChatSession;
+  name: {
+    type: String,
+    default: "Chat Session",
+  },
+
+  messages: [
+    {
+      role: String,
+      content: String,
+    },
+  ],
+});
+
+const ChatSession = mongoose.model("ChatSession", chatSessionSchema);
+
+export default ChatSession;

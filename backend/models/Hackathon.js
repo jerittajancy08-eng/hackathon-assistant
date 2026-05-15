@@ -1,5 +1,4 @@
-const mongoose = require('mongoose');
-
+import mongoose from "mongoose";
 const hackathonSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true, index: true },
@@ -23,4 +22,4 @@ const hackathonSchema = new mongoose.Schema(
 hackathonSchema.index({ title: 'text', description: 'text', tags: 'text' });
 
 const Hackathon = mongoose.model('Hackathon', hackathonSchema);
-module.exports = Hackathon;
+export default Hackathon;

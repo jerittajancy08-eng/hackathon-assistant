@@ -1,427 +1,337 @@
-import ReactMarkdown from "react-markdown";
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { sendMessage } from "./services/chatService";
 
-function App() {
-  const filterButton = {
-  padding: "10px 16px",
-  background: "#2563eb",
-  color: "white",
-  border: "none",
-  borderRadius: "8px",
-  cursor: "pointer",
-  fontWeight: "bold",
+const URL_REGEX = /https?:\/\/[^\s)]+/g;
+const FALLBACK_TEXT = "Unable to receive a response. Please try again.";
+
+const normalizeText = (value) => {
+  if (value === undefined || value === null) return "";
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) {
+    return value.map(normalizeText).filter(Boolean).join("\n\n");
+  }
+  if (typeof value === "object") {
+    return Object.entries(value)
+      .map(([key, item]) => {
+        const text = normalizeText(item);
+        return text ? `${key}: ${text}` : "";
+      })
+      .filter(Boolean)
+      .join("\n\n");
+  }
+  return String(value);
 };
+
+const sanitizeText = (text) => {
+  if (typeof text !== "string") return "";
+
+  return text
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/^#{1,6}\s/gm, "")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, "$1: $2")
+    .trim();
+};
+
+const getResponseText = (data) => {
+  if (!data) return FALLBACK_TEXT;
+
+  const raw =
+    data.reply ??
+    data.message ??
+    data.content ??
+    data.answer ??
+    data.result ??
+    data;
+
+  if (Array.isArray(raw)) {
+  return raw
+    .map((item) => {
+      if (typeof item === "object" && item !== null) {
+        return `
+${item.title ? `## ${item.title}` : ""}
+
+${item.description || ""}
+
+${item.link ? `🔗 Official Link: ${item.link}` : ""}
+        `.trim();
+      }
+
+      return normalizeText(item);
+    })
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+  if (typeof raw === "object") {
+    return normalizeText(raw) || FALLBACK_TEXT;
+  }
+
+  const normalized = normalizeText(raw);
+  return normalized || FALLBACK_TEXT;
+};
+
+const renderInlineText = (text) => {
+  const safeText = String(text || "");
+  const fragments = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = URL_REGEX.exec(safeText)) !== null) {
+    const url = match[0];
+    const start = match.index;
+
+    if (start > lastIndex) {
+      fragments.push(safeText.slice(lastIndex, start));
+    }
+
+    fragments.push(
+      <a
+        key={`${start}-${url}`}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="smart-link"
+      >
+        {url}
+      </a>
+    );
+    lastIndex = start + url.length;
+  }
+
+  if (lastIndex < safeText.length) {
+    fragments.push(safeText.slice(lastIndex));
+  }
+
+  return fragments.length > 0 ? fragments : safeText;
+};
+
+const renderMessageContent = (content) => {
+  const safeContent = sanitizeText(normalizeText(content));
+  if (!safeContent) return null;
+
+  const blocks = safeContent
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  return blocks.map((block, blockIndex) => {
+    const lines = block.split("\n");
+    const isList = lines.every((line) => /^[-*]\s+/.test(line));
+
+    if (isList) {
+      return (
+        <ul className="message-list" key={blockIndex}>
+          {lines.map((line, lineIndex) => (
+            <li key={lineIndex}>{renderInlineText(line.replace(/^[-*]\s+/, ""))}</li>
+          ))}
+        </ul>
+      );
+    }
+
+    return (
+      <p className="message-text" key={blockIndex}>
+        {lines.flatMap((line, lineIndex) => [
+          renderInlineText(line),
+          lineIndex < lines.length - 1 ? <br key={`br-${blockIndex}-${lineIndex}`} /> : null,
+        ])}
+      </p>
+    );
+  });
+};
+
+function App() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [chatHistory, setChatHistory] = useState([]);
-const [currentChatId, setCurrentChatId] = useState(null);
-const messagesEndRef = useRef(null);
-const [loading, setLoading] = useState(false);
-useEffect(() => {
-  const savedChats =
-    JSON.parse(localStorage.getItem("chatHistory")) || [];
+  const [currentChatId, setCurrentChatId] = useState(null);
+  const messagesEndRef = useRef(null);
 
-  setChatHistory(savedChats);
+  useEffect(() => {
+    const savedChats = JSON.parse(localStorage.getItem("chatHistory")) || [];
+    setChatHistory(savedChats);
+    if (savedChats.length > 0) {
+      setMessages(savedChats[0].messages);
+      setCurrentChatId(savedChats[0].id);
+    }
+  }, []);
 
-  if (savedChats.length > 0) {
-    setMessages(savedChats[0].messages);
-    setCurrentChatId(savedChats[0].id);
-  }
-}, []);
-useEffect(() => {
-  messagesEndRef.current?.scrollIntoView({
-    behavior: "smooth",
-  });
-}, [messages]);
-  async function handleSend() {
-  if (!message.trim()) return;
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-     const userMessage = {
-  role: "user",
-  content: message,
-  time: new Date().toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  }),
-};
- 
-
-  const updatedMessages = [...messages, userMessage];
-
-setMessages(updatedMessages);
-setMessage("");
-
-  try {
-    setMessages((prev) => [
-  ...prev,
-  { role: "assistant", content: "Thinking..." },
-]);
-    const data = await sendMessage(message);
-    if (
-  message.toLowerCase().includes("hackathon") ||
-  message.toLowerCase().includes("ai") ||
-  message.toLowerCase().includes("web")
-) {
-  const res = await fetch(
-  `https://hackathon-assistant.onrender.com/api/hackathons/search?q=${message}`
-);
-  const hackathons = await res.json();
-
- const formatted = hackathons
-  .slice(0, 5)
-  .map(
-    (h) => `
----
-
-🏆 ${h.title}
-
-📍 Location: ${h.location}
-
-🎯 Domain: ${h.domain}
-
-🚀 Mode: ${h.mode}
-
-💰 Prize: ${h.prize}
-
-🗓 Date: ${h.date}
-
-🔗 [Register Here](${h.link})
-`
-  )
-  .join("\n");
-
-  data.reply =
-    "Here are some hackathons from database:\n\n" +
-    formatted;
-}
-setLoading(true);
-    const fullReply = data.reply || "No response";
-
-let currentText = "";
-
-const aiMessage = {
-  role: "assistant",
-  content: "",
-};
-
-const updated = [
-  ...updatedMessages,
-  {
-    role: "assistant",
-    content: currentText,
-    time: new Date().toLocaleTimeString([], {
-  hour: "2-digit",
-  minute: "2-digit",
-}),
-  },
-];
-
-setMessages(updated);
-setLoading(false);
-
-const updatedChat = {
-  id: currentChatId || Date.now(),
-  title: updatedMessages[0]?.content || "New Chat",
-  messages: updated,
-};
-
-let newHistory = [...chatHistory];
-
-const existingIndex = newHistory.findIndex(
-  (chat) => chat.id === updatedChat.id
-);
-
-if (existingIndex >= 0) {
-  newHistory[existingIndex] = updatedChat;
-} else {
-  newHistory.unshift(updatedChat);
-}
-
-setChatHistory(newHistory);
-
-localStorage.setItem(
-  "chatHistory",
-  JSON.stringify(newHistory)
-);
-
-setCurrentChatId(updatedChat.id);
-
-setMessages((prev) => {
-  const updated = [...prev];
-console.log(fullReply);
-  updated[updated.length - 1] = {
-    role: "assistant",
-    content: fullReply,
-    time: new Date().toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
+  const getChatTitle = (text) => {
+    if (!text) return "New Chat";
+    return text.length > 24 ? `${text.slice(0, 24)}...` : text;
   };
 
-  return updated;
-});
-  } catch (error) {
-    console.error(error);
-    setLoading(false);
-  }
+  const saveChatHistory = (updatedChat) => {
+    const newHistory = [...chatHistory];
+    const existingIndex = newHistory.findIndex((chat) => chat.id === updatedChat.id);
 
-  setMessage("");
-}
+    if (existingIndex >= 0) {
+      newHistory[existingIndex] = updatedChat;
+    } else {
+      newHistory.unshift(updatedChat);
+    }
 
-  return (
-    <div
-  style={{
-    background: "#020617",
-    display: "flex",
-        minHeight: "100vh",
-        color: "white",
-        padding: "40px",
-      }}
-    >
-      <div
-  style={{
-    width: "260px",
-    background: "#0f172a",
-    padding: "20px",
-    borderRight: "1px solid #1e293b",
-    height: "100vh",
-    overflowY: "auto",
-  }}
->
-  <button
-    onClick={() => {
+    setChatHistory(newHistory);
+    localStorage.setItem("chatHistory", JSON.stringify(newHistory));
+    setCurrentChatId(updatedChat.id);
+  };
+
+  const handleSend = async (customMessage) => {
+    const finalMessage = customMessage || message;
+    if (!finalMessage.trim()) return;
+
+    const userMessage = {
+      role: "user",
+      content: finalMessage,
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    setMessage("");
+
+    const data = await sendMessage(finalMessage);
+    const botReply = getResponseText(data);
+
+    const assistantMessage = {
+      role: "assistant",
+      content: botReply,
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+
+    const finalMessages = [...updatedMessages, assistantMessage];
+    setMessages(finalMessages);
+
+    const updatedChat = {
+      id: currentChatId || Date.now(),
+      title: getChatTitle(updatedMessages[0]?.content || "New Chat"),
+      messages: finalMessages,
+      createdAt: new Date().toISOString(),
+    };
+
+    saveChatHistory(updatedChat);
+  };
+
+  const deleteChat = (id, event) => {
+    event.stopPropagation();
+    if (!window.confirm("Delete this chat?")) return;
+    const newHistory = chatHistory.filter((c) => c.id !== id);
+    setChatHistory(newHistory);
+    localStorage.setItem("chatHistory", JSON.stringify(newHistory));
+    if (currentChatId === id) {
       setMessages([]);
       setCurrentChatId(null);
-    }}
-    style={{
-      width: "100%",
-      padding: "12px",
-      background: "#2563eb",
-      color: "white",
-      border: "none",
-      borderRadius: "10px",
-      cursor: "pointer",
-      marginBottom: "20px",
-    }}
-  >
-    + New Chat
-  </button>
+    }
+  };
 
-  {chatHistory.map((chat) => (
-    <div
-      key={chat.id}
-      onClick={() => {
-        setMessages(chat.messages);
-        setCurrentChatId(chat.id);
-      }}
-      style={{
-        padding: "10px",
-        background:
-          currentChatId === chat.id
-            ? "#1e293b"
-            : "transparent",
-        borderRadius: "8px",
-        cursor: "pointer",
-        marginBottom: "10px",
-      }}
-    >
-      {chat.title}
+  const clearAllChats = () => {
+    if (!window.confirm("Clear all chats?")) return;
+    setChatHistory([]);
+    localStorage.removeItem("chatHistory");
+    setMessages([]);
+    setCurrentChatId(null);
+  };
+
+  const quickPrompts = [
+    { label: "AI", prompt: "suggest ai hackathon ideas" },
+    { label: "Web3", prompt: "suggest web3 hackathon ideas" },
+    { label: "Online", prompt: "suggest online hackathons" },
+    { label: "Offline", prompt: "suggest offline hackathons" },
+  ];
+
+  return (
+    <div className="app-container app-layout">
+      <aside className="sidebar">
+        <div className="sidebar-header">
+          <div>
+            <div className="sidebar-title">Hackathon Assistant</div>
+            <div className="sidebar-subtitle">Smart chat + curated ideas</div>
+          </div>
+          <button className="clear-button" onClick={clearAllChats}>
+            Clear
+          </button>
+        </div>
+
+        <button
+          className="new-chat-button"
+          onClick={() => {
+            setMessages([]);
+            setCurrentChatId(null);
+          }}
+        >
+          + New Chat
+        </button>
+
+        <div className="sidebar-list">
+          {chatHistory.map((chat) => (
+            <div
+              key={chat.id}
+              className={`sidebar-item ${currentChatId === chat.id ? "active" : ""}`}
+              onClick={() => {
+                setMessages(chat.messages);
+                setCurrentChatId(chat.id);
+              }}
+            >
+              <span>{chat.title}</span>
+              <button className="delete-icon" onClick={(e) => deleteChat(chat.id, e)}>
+                ✖
+              </button>
+            </div>
+          ))}
+        </div>
+      </aside>
+
+      <main className="content-panel">
+        <section className="controls-row">
+          {quickPrompts.map((item) => (
+            <button key={item.label} className="filter-button" onClick={() => handleSend(item.prompt)}>
+              {item.label}
+            </button>
+          ))}
+        </section>
+
+        <section className="chat-input-row">
+          <input
+            className="input-glass"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSend();
+            }}
+            placeholder="Ask something..."
+          />
+          <button className="send-button" onClick={handleSend} disabled={!message.trim()}>
+            Send
+          </button>
+        </section>
+
+        <div className="messages-container">
+          {messages.map((msg, index) => (
+            <div key={index} className={`message-row ${msg.role}`}>
+              <div className={`avatar ${msg.role}`}>{msg.role === "assistant" ? "🤖" : "👤"}</div>
+              <div className={`message-bubble ${msg.role}`}>
+                <div className="message-content">{renderMessageContent(msg.content)}</div>
+                <div className="message-time">{msg.time}</div>
+              </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+      </main>
     </div>
-  ))}
-  </div>
-
-<div style={{ flex: 1, padding: "40px" }}>
-      <h1>Hackathon Assistant</h1>
-      <div
-  style={{
-    display: "flex",
-    gap: "10px",
-    marginBottom: "20px",
-    flexWrap: "wrap",
-  }}
->
-  <button
-    onClick={() => {
-      setMessage("ai");
-      handleSend();
-    }}
-    style={filterButton}
-  >
-    AI
-  </button>
-
-  <button
-    onClick={() => {
-      setMessage("web3");
-      handleSend();
-    }}
-    style={filterButton}
-  >
-    Web3
-  </button>
-
-  <button
-    onClick={() => {
-      setMessage("online");
-      handleSend();
-    }}
-    style={filterButton}
-  >
-    Online
-  </button>
-
-  <button
-    onClick={() => {
-      setMessage("offline");
-      handleSend();
-    }}
-    style={filterButton}
-  >
-    Offline
-  </button>
-</div>
-
-      <input
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        onKeyDown={(e) => {
-  if (e.key === "Enter") {
-    handleSend();
-  }
-}}
-        placeholder="Ask something..."
-        style={{
-          padding: "10px",
-          width: "300px",
-          color: "black",
-        }}
-      />
-
-      <button
-        onClick={handleSend}
-        style={{
-          marginLeft: "10px",
-          padding: "10px",
-        }}
-      >
-        Send
-      </button>
-
-      <div
-  style={{
-    marginTop: "20px",
-    overflowY: "auto",
-    height: "70vh",
-  }}
->
-  {messages.map((msg, index) => (
-    <div
-  key={index}
- style={{
-  display: "flex",
-
-  flexDirection:
-    msg.role === "user"
-      ? "row-reverse"
-      : "row",
-
-  alignItems: "flex-start",
-  gap: "10px",
-  marginBottom: "15px",
-}}
->
-  {msg.role === "assistant" ? (
-    <div
-      style={{
-        width: "40px",
-        height: "40px",
-        borderRadius: "50%",
-        background: "#1d4ed8",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: "20px",
-      }}
-    >
-      🤖
-    </div>
-  ) : (
-    <div
-      style={{
-        width: "40px",
-        height: "40px",
-        borderRadius: "50%",
-        background: "#2563eb",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: "20px",
-      }}
-    >
-      👤
-    </div>
-  )}
-
-  <div
-style={{
-background:
-msg.role === "user" ? "#2563eb" : "#1e293b",
-maxWidth: "70%",
-wordBreak: "break-word",
-overflowWrap: "break-word",
-whiteSpace: "pre-wrap",
-padding: "12px",
-borderRadius: "12px",
-}}
->
-             <ReactMarkdown
-  components={{
-    a: ({ node, ...props }) => (
-      <a
-        {...props}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          color: "#60a5fa",
-          textDecoration: "underline",
-        }}
-      />
-    ),
-  }}
->
-   {msg.content || ""}
-</ReactMarkdown>
-      <div
-  style={{
-    fontSize: "12px",
-    opacity: 0.7,
-    marginTop: "6px",
-  }}
->
-  {msg.time}
-</div>
-    </div>
-  </div>
-))}
-<div ref={messagesEndRef} />
-{loading && (
-  <div
-    style={{
-      background: "#1e293b",
-      padding: "12px",
-      borderRadius: "12px",
-      width: "fit-content",
-      marginTop: "10px",
-      color: "white",
-    }}
-  >
-    Typing...
-  </div>
-)}
-    </div>
-  </div></div>
-);
+  );
 }
 
 export default App;
