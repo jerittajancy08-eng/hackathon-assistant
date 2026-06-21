@@ -125,11 +125,13 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [chatHistory, setChatHistory] = useState([]);
   const [currentChatId, setCurrentChatId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window === "undefined") return true;
     return window.innerWidth > 768;
   });
   const messagesEndRef = useRef(null);
+  const isSendingRef = useRef(false);
 
   useEffect(() => {
     const savedChats = JSON.parse(localStorage.getItem("chatHistory")) || [];
@@ -174,8 +176,13 @@ function App() {
   };
 
   const handleSend = async (customMessage) => {
-    const finalMessage = customMessage || message;
+    if (isSendingRef.current) return;
+
+    const finalMessage = typeof customMessage === "string" ? customMessage : message;
     if (!finalMessage.trim()) return;
+
+    isSendingRef.current = true;
+    setIsLoading(true);
 
     const userMessage = {
       role: "user",
@@ -190,29 +197,34 @@ function App() {
     setMessages(updatedMessages);
     setMessage("");
 
-    const data = await sendMessage(finalMessage);
-    const botReply = getResponseText(data);
+    try {
+      const data = await sendMessage(finalMessage);
+      const botReply = getResponseText(data);
 
-    const assistantMessage = {
-      role: "assistant",
-      content: botReply,
-      time: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
+      const assistantMessage = {
+        role: "assistant",
+        content: botReply,
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
 
-    const finalMessages = [...updatedMessages, assistantMessage];
-    setMessages(finalMessages);
+      const finalMessages = [...updatedMessages, assistantMessage];
+      setMessages(finalMessages);
 
-    const updatedChat = {
-      id: currentChatId || Date.now(),
-      title: getChatTitle(updatedMessages[0]?.content || "New Chat"),
-      messages: finalMessages,
-      createdAt: new Date().toISOString(),
-    };
+      const updatedChat = {
+        id: currentChatId || Date.now(),
+        title: getChatTitle(updatedMessages[0]?.content || "New Chat"),
+        messages: finalMessages,
+        createdAt: new Date().toISOString(),
+      };
 
-    saveChatHistory(updatedChat);
+      saveChatHistory(updatedChat);
+    } finally {
+      isSendingRef.current = false;
+      setIsLoading(false);
+    }
   };
 
   const deleteChat = (id, event) => {
@@ -333,11 +345,15 @@ function App() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") handleSend();
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleSend();
+              }
             }}
             placeholder="Message Hackathon Assistant"
+            disabled={isLoading}
           />
-          <button className="send-button" onClick={handleSend} disabled={!message.trim()}>
+          <button className="send-button" onClick={handleSend} disabled={isLoading || !message.trim()}>
             Send
           </button>
         </section>
