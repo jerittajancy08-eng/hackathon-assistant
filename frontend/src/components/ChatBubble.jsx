@@ -1,4 +1,5 @@
 import HackathonCard from './HackathonCard';
+import { cleanupResponse } from '../utils/responseFormatter';
 
 function ChatBubble({ message }) {
   const isAssistant = message.role === 'assistant';
@@ -95,66 +96,92 @@ function ChatBubble({ message }) {
   };
 
   const renderContent = (content) => {
-    const cards = parseHackathonCards(content);
+    const cleanContent = cleanupResponse(content);
+    const cards = parseHackathonCards(cleanContent);
 
     if (cards && cards.length > 0) {
       return renderHackathonCards(cards);
     }
 
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return renderReadableText(cleanContent);
+  };
 
-    const elements = [];
-    let lastIndex = 0;
-    let match;
-    let key = 0;
+  const renderInlineLinks = (text, keyPrefix) => {
+    const urlRegex = /(https?:\/\/[^\s)]+)/g;
+    const parts = text.split(urlRegex);
 
-    const appendText = (text) => {
-      const lines = text.split('\n');
-
-      lines.forEach((line, index) => {
-        if (index > 0) {
-          elements.push(<br key={`br-${key++}`} />);
-        }
-
-        if (line) {
-          elements.push(
-            <span key={`text-${key++}`}>
-              {line}
-            </span>
-          );
-        }
-      });
-    };
-
-    while ((match = urlRegex.exec(content)) !== null) {
-      if (match.index > lastIndex) {
-        appendText(
-          content.slice(lastIndex, match.index)
+    return parts.map((part, index) => {
+      if (/^https?:\/\//i.test(part)) {
+        const href = part.replace(/[),.]+$/g, '');
+        return (
+          <a
+            key={`${keyPrefix}-link-${index}`}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-cyan-300 hover:text-cyan-100 underline underline-offset-2 transition-colors"
+          >
+            {href}
+          </a>
         );
       }
 
-      elements.push(
-        <a
-          key={`link-${key++}`}
-          href={match[0]}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-cyan-300 hover:text-cyan-100 underline underline-offset-2 transition-colors"
-        >
-          {match[0]}
-        </a>
-      );
+      return <span key={`${keyPrefix}-text-${index}`}>{part}</span>;
+    });
+  };
 
-      lastIndex = match.index + match[0].length;
-    }
+  const renderReadableText = (content) => {
+    const blocks = content.split(/\n{2,}/).map((block) => block.trim()).filter(Boolean);
 
-    if (lastIndex < content.length) {
-      appendText(content.slice(lastIndex));
-    }
+    return (
+      <div className="assistant-response">
+        {blocks.map((block, index) => {
+          if (/^-{3,}$/.test(block)) {
+            return <hr key={index} className="my-4 border-slate-700/80" />;
+          }
 
-    return elements.length > 0
-      ? elements
-      : content;
+          const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
+          const isList = lines.every((line) => /^([-*•]|\d+\.)\s+/.test(line));
+          const firstLine = lines[0] || '';
+          const isHeading =
+            lines.length === 1 &&
+            !/^([-*•]|\d+\.)\s+/.test(firstLine) &&
+            !/^https?:\/\//i.test(firstLine) &&
+            firstLine.length <= 80;
+
+          if (isHeading) {
+            return (
+              <h3 key={index} className="message-heading">
+                {firstLine.replace(/^#+\s*/, '')}
+              </h3>
+            );
+          }
+
+          if (isList) {
+            return (
+              <ul key={index} className="message-list">
+                {lines.map((line, lineIndex) => (
+                  <li key={lineIndex}>
+                    {renderInlineLinks(line.replace(/^([-*•]|\d+\.)\s+/, ''), `${index}-${lineIndex}`)}
+                  </li>
+                ))}
+              </ul>
+            );
+          }
+
+          return (
+            <p key={index} className="message-text">
+              {lines.map((line, lineIndex) => (
+                <span key={lineIndex}>
+                  {renderInlineLinks(line.replace(/^#+\s*/, ''), `${index}-${lineIndex}`)}
+                  {lineIndex < lines.length - 1 ? <br /> : null}
+                </span>
+              ))}
+            </p>
+          );
+        })}
+      </div>
+    );
   };
 
   return (

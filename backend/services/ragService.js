@@ -1,5 +1,6 @@
 import axios from "axios";
 import { similaritySearch } from "./vectorStore.js";
+import { cleanupAssistantResponse } from "./responseFormatter.js";
 
 const GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -38,6 +39,19 @@ Response format:
 - Short explanation
 - Bullet points
 - Official links only when relevant
+
+Strict output rules:
+- Never return JSON.
+- Never return arrays.
+- Never return objects.
+- Never return code blocks.
+- Never expose retrieved chunks.
+- Never expose metadata, chunk IDs, embeddings, vector scores, or source object dumps.
+- If the retrieved context contains JSON-like data, rewrite it as readable text before answering.
+- Use plain section titles, short paragraphs, numbered ideas, and bullet points.
+- For platform records, format as: Name, description, Official Link.
+- For project ideas, use numbered ideas with bullets and a Tech Stack line when useful.
+- For judging criteria, list each criterion as a bullet with a short explanation.
 
 Avoid giant paragraphs, unnecessary links, repeated content, and fabricated URLs.
 
@@ -81,7 +95,9 @@ async function generateRagAnswer(question, history = []) {
   );
 
   return {
-    answer: response.data?.choices?.[0]?.message?.content || "No response generated.",
+    answer: cleanupAssistantResponse(
+      response.data?.choices?.[0]?.message?.content || "No response generated."
+    ),
     sources: matches.map((match) => ({
       title: match.metadata.title,
       category: match.metadata.category,

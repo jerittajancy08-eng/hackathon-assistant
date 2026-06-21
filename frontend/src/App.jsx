@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useRef } from "react";
 import { sendMessage } from "./services/chatService";
+import { cleanupResponse } from "./utils/responseFormatter";
 
 const URL_REGEX = /https?:\/\/[^\s)]+/g;
 const FALLBACK_TEXT = "Unable to receive a response. Please try again.";
@@ -46,30 +47,7 @@ const getResponseText = (data) => {
     data.result ??
     data;
 
-  if (Array.isArray(raw)) {
-  return raw
-    .map((item) => {
-      if (typeof item === "object" && item !== null) {
-        return `
-${item.title ? `## ${item.title}` : ""}
-
-${item.description || ""}
-
-${item.link ? `🔗 Official Link: ${item.link}` : ""}
-        `.trim();
-      }
-
-      return normalizeText(item);
-    })
-    .filter(Boolean)
-    .join("\n\n");
-}
-
-  if (typeof raw === "object") {
-    return normalizeText(raw) || FALLBACK_TEXT;
-  }
-
-  const normalized = normalizeText(raw);
+  const normalized = cleanupResponse(raw);
   return normalized || FALLBACK_TEXT;
 };
 
@@ -109,7 +87,7 @@ const renderInlineText = (text) => {
 };
 
 const renderMessageContent = (content) => {
-  const safeContent = sanitizeText(normalizeText(content));
+  const safeContent = sanitizeText(cleanupResponse(content));
   if (!safeContent) return null;
 
   const blocks = safeContent
@@ -147,6 +125,7 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [chatHistory, setChatHistory] = useState([]);
   const [currentChatId, setCurrentChatId] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -244,35 +223,39 @@ function App() {
     setCurrentChatId(null);
   };
 
-  const quickPrompts = [
-    { label: "AI", prompt: "suggest ai hackathon ideas" },
-    { label: "Web3", prompt: "suggest web3 hackathon ideas" },
-    { label: "Online", prompt: "suggest online hackathons" },
-    { label: "Offline", prompt: "suggest offline hackathons" },
-  ];
-
   return (
-    <div className="app-container app-layout">
-      <aside className="sidebar">
+    <div className={`app-container app-layout ${isSidebarOpen ? "" : "sidebar-collapsed"}`}>
+      <aside className="sidebar" aria-label="Chat history">
         <div className="sidebar-header">
           <div>
             <div className="sidebar-title">Hackathon Assistant</div>
-            <div className="sidebar-subtitle">Smart chat + curated ideas</div>
+            <div className="sidebar-subtitle">Chat history</div>
           </div>
+          <button
+            className="icon-button"
+            onClick={() => setIsSidebarOpen(false)}
+            aria-label="Collapse sidebar"
+            title="Collapse sidebar"
+            type="button"
+          >
+            ‹
+          </button>
+        </div>
+
+        <div className="sidebar-actions">
+          <button
+            className="new-chat-button"
+            onClick={() => {
+              setMessages([]);
+              setCurrentChatId(null);
+            }}
+          >
+            New Chat
+          </button>
           <button className="clear-button" onClick={clearAllChats}>
             Clear
           </button>
         </div>
-
-        <button
-          className="new-chat-button"
-          onClick={() => {
-            setMessages([]);
-            setCurrentChatId(null);
-          }}
-        >
-          + New Chat
-        </button>
 
         <div className="sidebar-list">
           {chatHistory.map((chat) => (
@@ -293,16 +276,39 @@ function App() {
         </div>
       </aside>
 
-      <main className="content-panel">
-        <section className="controls-row">
-          {quickPrompts.map((item) => (
-            <button key={item.label} className="filter-button" onClick={() => handleSend(item.prompt)}>
-              {item.label}
-            </button>
-          ))}
-        </section>
+      <button
+        className="sidebar-rail-button"
+        onClick={() => setIsSidebarOpen(true)}
+        aria-label="Open chat history"
+        title="Open chat history"
+        type="button"
+      >
+        ☰
+      </button>
 
-        <section className="chat-input-row">
+      <main className="content-panel">
+        <div className="messages-container">
+          <div className="messages-inner">
+            {messages.length === 0 ? (
+              <div className="empty-chat">
+                <div className="empty-title">How can I help?</div>
+              </div>
+            ) : null}
+
+            {messages.map((msg, index) => (
+              <div key={index} className={`message-row ${msg.role}`}>
+                <div className={`avatar ${msg.role}`}>{msg.role === "assistant" ? "AI" : "You"}</div>
+                <div className={`message-bubble ${msg.role}`}>
+                  <div className="message-content">{renderMessageContent(msg.content)}</div>
+                  <div className="message-time">{msg.time}</div>
+                </div>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+
+        <section className="chat-input-row" aria-label="Message composer">
           <input
             className="input-glass"
             value={message}
@@ -310,25 +316,12 @@ function App() {
             onKeyDown={(e) => {
               if (e.key === "Enter") handleSend();
             }}
-            placeholder="Ask something..."
+            placeholder="Message Hackathon Assistant"
           />
           <button className="send-button" onClick={handleSend} disabled={!message.trim()}>
             Send
           </button>
         </section>
-
-        <div className="messages-container">
-          {messages.map((msg, index) => (
-            <div key={index} className={`message-row ${msg.role}`}>
-              <div className={`avatar ${msg.role}`}>{msg.role === "assistant" ? "🤖" : "👤"}</div>
-              <div className={`message-bubble ${msg.role}`}>
-                <div className="message-content">{renderMessageContent(msg.content)}</div>
-                <div className="message-time">{msg.time}</div>
-              </div>
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
       </main>
     </div>
   );

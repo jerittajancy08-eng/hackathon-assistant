@@ -1,4 +1,5 @@
 import axios from "axios";
+import { cleanupResponse } from "../utils/responseFormatter";
 
 const API_URL = "https://hackathon-assistant.onrender.com/api/chat";
 
@@ -15,31 +16,31 @@ export const sendMessage = async (message, mode = "AI") => {
 
     // SAFE RESPONSE EXTRACTION
     if (typeof data === "string") {
-      return data;
+      return cleanupResponse(data);
     }
 
     if (data.reply) {
-      return data.reply;
+      return cleanupResponse(data.reply);
     }
 
     if (data.message) {
-      return data.message;
+      return cleanupResponse(data.message);
     }
 
     if (data.content) {
-      return data.content;
+      return cleanupResponse(data.content);
     }
 
     if (data.answer) {
-      return data.answer;
+      return cleanupResponse(data.answer);
     }
 
     if (data.result) {
-      return data.result;
+      return cleanupResponse(data.result);
     }
 
     // LAST RESORT
-    return JSON.stringify(data, null, 2);
+    return cleanupResponse(data);
   } catch (error) {
     console.error("CHAT SERVICE ERROR:", error);
 
@@ -48,5 +49,36 @@ export const sendMessage = async (message, mode = "AI") => {
     }
 
     return "Unable to receive a response. Please try again.";
+  }
+};
+
+export const sendChatMessage = async (messages, sessionId, authToken) => {
+  try {
+    const response = await axios.post(
+      API_URL,
+      {
+        messages,
+        sessionId,
+      },
+      {
+        headers: authToken
+          ? {
+              Authorization: `Bearer ${authToken}`,
+            }
+          : {},
+      }
+    );
+
+    return {
+      reply: cleanupResponse(response.data?.answer || response.data?.reply || response.data),
+      sources: response.data?.sources || [],
+    };
+  } catch (error) {
+    console.error("CHAT SERVICE ERROR:", error);
+
+    return {
+      reply: "Unable to receive a response. Please try again.",
+      sources: [],
+    };
   }
 };

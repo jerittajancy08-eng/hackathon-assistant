@@ -1,6 +1,7 @@
 import ChatSession from "../models/ChatSession.js";
 import Hackathon from "../models/Hackathon.js";
 import { generateRagAnswer } from "../services/ragService.js";
+import { cleanupAssistantResponse } from "../services/responseFormatter.js";
 
 const KEYWORD_PATTERNS = {
   greeting: /^(?:hi|hello|hey|good morning|good afternoon|good evening)\b/i,
@@ -46,7 +47,7 @@ async function handleChat(req, res) {
 
     if (isGreetingPrompt(prompt)) {
       return res.status(200).json({
-        answer: "HackBot\n\nHello. Ask me about hackathons, team formation, project ideas, judging, pitches, or tech stacks.",
+        answer: cleanupAssistantResponse("HackBot\n\nHello. Ask me about hackathons, team formation, project ideas, judging, pitches, or tech stacks."),
       });
     }
 
@@ -58,10 +59,10 @@ async function handleChat(req, res) {
 
     if (isChatHistoryPrompt(prompt)) {
       return res.status(200).json({
-        answer: `Chat History\n\n${formatBulletList([
+        answer: cleanupAssistantResponse(`Chat History\n\n${formatBulletList([
           "Saved chat sessions appear in the history panel.",
           "Use delete or clear chat to remove saved conversation history.",
-        ])}`,
+        ])}`),
       });
     }
 
@@ -74,7 +75,7 @@ async function handleChat(req, res) {
     const result = await generateRagAnswer(prompt, normalizeHistory(messages));
 
     return res.status(200).json({
-      answer: result.answer,
+      answer: cleanupAssistantResponse(result.answer),
       sources: result.sources,
       mode: "rag",
     });
