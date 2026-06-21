@@ -127,7 +127,7 @@ function App() {
   const [currentChatId, setCurrentChatId] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window === "undefined") return true;
-    return window.innerWidth >= 768;
+    return window.innerWidth > 768;
   });
   const messagesEndRef = useRef(null);
 
@@ -138,6 +138,15 @@ function App() {
       setMessages(savedChats[0].messages);
       setCurrentChatId(savedChats[0].id);
     }
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsSidebarOpen(window.innerWidth > 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   useEffect(() => {
@@ -278,6 +287,13 @@ function App() {
           ))}
         </div>
       </aside>
+
+      <button
+        className="sidebar-backdrop"
+        onClick={() => setIsSidebarOpen(false)}
+        aria-label="Close chat history"
+        type="button"
+      />
 
       <button
         className="sidebar-rail-button"
